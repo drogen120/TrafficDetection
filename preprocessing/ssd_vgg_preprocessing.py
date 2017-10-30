@@ -43,7 +43,7 @@ _B_MEAN = 104.
 BBOX_CROP_OVERLAP = 0.5         # Minimum overlap to keep a bbox after cropping.
 MIN_OBJECT_COVERED = 0.8
 CROP_RATIO_RANGE = (0.8, 1.1)  # Distortion ratio during cropping.
-EVAL_SIZE = (300, 300)
+EVAL_SIZE = (440, 440)
 
 
 def tf_image_whitened(image, means=[_R_MEAN, _G_MEAN, _B_MEAN]):

@@ -16,7 +16,7 @@ sys.path.append('./')
 
 from nets import ssd_vgg, ssd_common, np_methods
 from nets import mobilenet_pretrained_owndata
-from preprocessing import ssd_vgg_preprocessing
+from preprocessing import ssd_owndata_preprocessing
 
 # TensorFlow session: grow memory when needed. TF, DO NOT USE ALL MY GPU MEMORY!!!
 gpu_options = tf.GPUOptions(allow_growth=True)
@@ -28,8 +28,8 @@ net_shape = (440, 440)
 data_format = 'NHWC'
 img_input = tf.placeholder(tf.uint8, shape=(None, None, 3))
 # Evaluation pre-processing: resize to SSD net shape.
-image_pre, labels_pre, bboxes_pre, bbox_img = ssd_vgg_preprocessing.preprocess_for_eval(
-    img_input, None, None, net_shape, data_format, resize=ssd_vgg_preprocessing.Resize.WARP_RESIZE)
+image_pre, labels_pre, bboxes_pre, bbox_img = ssd_owndata_preprocessing.preprocess_for_eval(
+    img_input, None, None, net_shape, data_format, resize=ssd_owndata_preprocessing.Resize.WARP_RESIZE)
 image_4d = tf.expand_dims(image_pre, 0)
 
 # Define the SSD model.
@@ -113,7 +113,7 @@ def draw_results(img, rclasses, rscores, rbboxes, index):
         cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (0, 0, 255), thickness=2)
         cv2.putText(img, str(rclasses[i]) + ' ' +str(rscores[i]), (xmin, ymin), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255))
     #cv2.imshow("predict", img)
-    cv2.imwrite('./test_result/test_%d.jpg' % index, img)
+    cv2.imwrite('./test_result_new/test_%d.jpg' % index, img)
 
 # path = '/home/gpu_server2/DataSet/dayTrain/dayTest/daySequence1/frames/'
 path = './test_img/'
