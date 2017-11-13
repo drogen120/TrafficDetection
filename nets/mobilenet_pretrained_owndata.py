@@ -526,6 +526,20 @@ def mobilenet_ssd_traffic_net(inputs,
             predictions = []
             logits = []
             localisations = []
+            with tf.variable_scope('FPN'):
+                for i in range(len(feat_layers)-2, -1, -1):
+                    endpoint_name = feat_layers[i] + '_fpn'
+                    output_num = \
+                    _, height, width, depth = end_points[feat_layers[i]].get_shape().as_list()
+                    with tf.variable_scope(endpoint_name):
+                        feature_net = slim.conv2d(end_points[feat_layers[i+1]],
+                                          depth, [3, 3])
+                        feature_net = tf.image.resize_bilinear(feature_net,
+                                                               [height, width])
+                        end_points[feat_layers[i]] = \
+                        end_points[feat_layers[i]] + feature_net
+
+    
             with tf.variable_scope('Box'):
                 for i, layer in enumerate(feat_layers):
                     with tf.variable_scope(layer + '_box'):
@@ -698,22 +712,6 @@ def ssd_anchor_one_layer(img_shape,
         w[i+di] = sizes[0] / img_shape[1] * math.sqrt(r)
     return y, x, h, w
 
-
-#    for i, r in enumerate(ratios):
-#        h[i+di] = sizes[0] / img_shape[0] * r
-#        w[i+di] = sizes[1] / img_shape[1] * r
-    # else:
-    #     h[0] = sizes[0] / img_shape[0]
-    #     w[0] = sizes[1] / img_shape[1]
-    #     di = 1
-    #
-    #     for i, r in enumerate(ratios):
-    #         h[i+di] = sizes[0] / img_shape[0] * r
-    #         w[i+di] = sizes[1] / img_shape[1] * r
-
-    return y, x, h, w
-
-
 def ssd_anchors_all_layers(img_shape,
                            layers_shape,
                            anchor_sizes,
@@ -770,28 +768,16 @@ def ssd_multibox_layer(inputs,
 
     # Location.
     num_loc_pred = num_anchors * 4
-    # net = slim.conv2d(net, 128, [3, 5], activation_fn=tf.nn.relu,
-    #                        scope='conv_features')
-
-    # net = slim.separable_conv2d(net, None, [3, 3], depth_multiplier=1, stride=1, rate=1, normalizer_fn=slim.batch_norm, scope='conv_features_dipthwise')
-    # net = slim.conv2d(net, 512, [1, 1], stride=1, normalizer_fn=slim.batch_norm, scope='conv_features_pointwise')
-
-    # loc_pred = slim.conv2d(net, num_loc_pred, [3, 3], activation_fn=None,
-    #                        scope='conv_loc')
 
     loc_pred = slim.separable_conv2d(net, None, [3, 3], depth_multiplier=1, stride=1, rate=1, normalizer_fn=slim.batch_norm, scope='conv_loc_dipthwise')
     loc_pred = slim.conv2d(loc_pred, num_loc_pred, [1, 1], stride=1, normalizer_fn=slim.batch_norm, activation_fn=None, scope='conv_loc_pointwise')
-    #loc_pred = custom_layers.channel_to_last(loc_pred)
     loc_pred = tf.reshape(loc_pred,
                           tensor_shape(loc_pred, 4)[:-1]+[num_anchors, 4])
     # Class prediction.
     num_cls_pred = num_anchors * num_classes
 
-    # cls_pred = slim.conv2d(net, num_cls_pred, [3, 3], activation_fn=None,
-    #                        scope='conv_cls')
     cls_pred = slim.separable_conv2d(net, None, [3, 3], depth_multiplier=1, stride=1, rate=1, normalizer_fn=slim.batch_norm, scope='conv_cls_dipthwise')
     cls_pred = slim.conv2d(cls_pred, num_cls_pred, [1, 1], stride=1, normalizer_fn=slim.batch_norm, activation_fn=None, scope='conv_cls_pointwise')
-    #cls_pred = custom_layers.channel_to_last(cls_pred)
     cls_pred = tf.reshape(cls_pred,
                           tensor_shape(cls_pred, 4)[:-1]+[num_anchors, num_classes])
     return cls_pred, loc_pred

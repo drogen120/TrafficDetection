@@ -310,7 +310,7 @@ def main(_):
         variables_to_train = tf.trainable_variables()
         variables_to_restore = \
         tf.contrib.framework.filter_variables(variables_to_train,
-                                              exclude_patterns=['_box'])
+                                              exclude_patterns=['_box', '_fpn'])
         restorer = tf.train.Saver(variables_to_restore)
 
         saver = tf.train.Saver(max_to_keep=5,
