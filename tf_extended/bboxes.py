@@ -38,8 +38,18 @@ def bboxes_sort_all_classes(classes, scores, bboxes, top_k=400, scope=None):
       classes, scores, bboxes: Sorted tensors of shape Batch x Top_k.
     """
     with tf.name_scope(scope, 'bboxes_sort', [classes, scores, bboxes]):
+        p_shape = tfe_tensors.get_shape(scores)
+        print (p_shape)
+        len_scores = p_shape[1]
+        print (len_scores)
+        # if tf.greater(top_k, p_shape[1]):
+            # top_k = p_shape[1]
+        top_k = tf.cond(tf.greater(top_k, len_scores), lambda:len_scores,
+                            lambda:top_k)
         scores, idxes = tf.nn.top_k(scores, k=top_k, sorted=True)
 
+        print ("shape of scores in sort mathod ==========:", scores.shape)
+        print ("shape of idxes in sort mathod ==========:", idxes.shape)
         # Trick to be able to use tf.gather: map for each element in the batch.
         def fn_gather(classes, bboxes, idxes):
             cl = tf.gather(classes, idxes)

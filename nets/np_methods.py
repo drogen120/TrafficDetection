@@ -90,6 +90,7 @@ def ssd_bboxes_select_layer(predictions_layer,
     else:
         sub_predictions = predictions_layer[:, :, 1:]
         idxes = np.where(sub_predictions > select_threshold)
+        print ('idxes: ', idxes)
         classes = idxes[-1]+1
         scores = sub_predictions[idxes]
         bboxes = localizations_layer[idxes[:-1]]
@@ -118,6 +119,7 @@ def ssd_bboxes_select(predictions_net,
         classes, scores, bboxes = ssd_bboxes_select_layer(
             predictions_net[i], localizations_net[i], anchors_net[i],
             select_threshold, img_shape, num_classes, decode)
+
         l_classes.append(classes)
         l_scores.append(scores)
         l_bboxes.append(bboxes)

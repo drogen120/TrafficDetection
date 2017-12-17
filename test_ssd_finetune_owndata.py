@@ -80,7 +80,7 @@ if ckpt and ckpt.model_checkpoint_path:
 # SSD default anchor boxes.
 ssd_anchors = ssd_net.anchors(net_shape)
 
-def process_image(img, select_threshold=0.45, nms_threshold=0.45, net_shape=(1024, 1024)):
+def process_image(img, select_threshold=0.35, nms_threshold=0.35, net_shape=(1024, 1024)):
     # Run SSD network.
     rimg, rpredictions, rlocalisations, rbbox_img, summary_op_str = isess.run([image_4d, predictions, localisations, bbox_img, summary_op],
                                                               feed_dict={img_input: img})
@@ -91,13 +91,24 @@ def process_image(img, select_threshold=0.45, nms_threshold=0.45, net_shape=(102
             rpredictions, rlocalisations, ssd_anchors,
             select_threshold=select_threshold, img_shape=net_shape, num_classes=11, decode=True)
 
+    print ("shape of rclasses:", rclasses.shape)
+    print ("shape of rscores:", rscores.shape)
+    print ("shape of rbboxes:", rbboxes.shape)
     rbboxes = np_methods.bboxes_clip(rbbox_img, rbboxes)
     rclasses, rscores, rbboxes = np_methods.bboxes_sort(rclasses, rscores, rbboxes, top_k=400)
+    print ('====================')
+    print ("shape of rclasses:", rclasses.shape)
+    print ("shape of rscores:", rscores.shape)
+    print ("shape of rbboxes:", rbboxes.shape)
     rclasses, rscores, rbboxes = np_methods.bboxes_nms(rclasses, rscores, rbboxes, nms_threshold=nms_threshold)
+    print ("~~~~~~~~~~~~~~~~~~~~")
+    print ("shape of rclasses:", rclasses.shape)
+    print ("shape of rscores:", rscores.shape)
+    print ("shape of rbboxes:", rbboxes.shape)
     # Resize bboxes to original image shape. Note: useless for Resize.WARP!
     rbboxes = np_methods.bboxes_resize(rbbox_img, rbboxes)
     summer_writer.add_summary(summary_op_str, 1)
-    print rclasses, rscores, rbboxes
+    # print rclasses, rscores, rbboxes
     return rclasses, rscores, rbboxes
 
 def draw_results(img, rclasses, rscores, rbboxes, index):
@@ -113,12 +124,12 @@ def draw_results(img, rclasses, rscores, rbboxes, index):
         cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (0, 0, 255), thickness=2)
         cv2.putText(img, str(rclasses[i]) + ' ' +str(rscores[i]), (xmin, ymin), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255))
     #cv2.imshow("predict", img)
-    cv2.imwrite('./test_result_new/test_%d.jpg' % index, img)
+    cv2.imwrite('./test_result/test_%d.jpg' % index, img)
 
 # path = '/home/gpu_server2/DataSet/dayTrain/dayTest/daySequence1/frames/'
 path = './test_img/'
 image_names = sorted(os.listdir(path))
-print image_names
+# print image_names
 index = 1
 for image_name in image_names:
     img = cv2.imread(path + image_name)
