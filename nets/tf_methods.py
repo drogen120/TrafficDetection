@@ -178,6 +178,43 @@ def tf_bboxes_resize(bbox_ref, bboxes):
 
 def tf_bboxes_nms(classes,scores,bboxes, nms_threshold = 0.45):
     # scores, bboxes = tfe.bboxes_nms_batch(scores, bboxes, nms_threshold)
-    scores, bboxes = tfe.bboxes_nms(scores, bboxes, nms_threshold)
-    classes = tf.ones_like(scores)
-    return classes, scores, bboxes
+    # scores, bboxes = tfe.bboxes_nms(scores, bboxes, nms_threshold)
+    # classes = tf.ones_like(scores)
+    score_shape = tfe.get_shape(scores)
+    scores = tf.squeeze(scores, axis=0)
+    classes = tf.squeeze(classes, axis=0)
+    bboxes = tf.squeeze(bboxes, axis=0)
+    keep_maps = tf.ones_like(scores, dtype=tf.bool)
+    element_index = 0
+    def update_maps(element_index, maps):
+        jacard_scores = tfe.bboxes_jaccard(bboxes[element_index], bboxes[element_index+1:])
+        print jacard_scores.shape
+        # keep_overlap = tf.logical_or(jacard_scores < nms_threshold,
+                                     # classes[element_index+1:] != classes[element_index])
+        keep_overlap = tf.logical_or(jacard_scores < nms_threshold,
+                                     tf.not_equal(classes[element_index+1:]
+                                                  ,classes[element_index]))
+        
+        all_keep_overlap = tf.concat([tf.ones_like(maps[:element_index+1], dtype =
+                                                 tf.bool), keep_overlap], axis=
+                                    0)
+        maps = tf.logical_and(maps, all_keep_overlap)
+        return maps
+
+    def loop_cond(element_index, maps):
+        return element_index < score_shape[1]
+
+    def loop_body(element_index, maps):
+        maps = tf.cond(maps[element_index], lambda:
+                       update_maps(element_index, maps),
+                       lambda: maps)
+        element_index += 1
+        return element_index, maps
+
+    result = tf.while_loop(loop_cond, loop_body, [element_index, keep_maps])
+    idxes = tf.where(result[1])
+    idxes = tf.cast(idxes,tf.int32)
+    classes = tf.gather(classes, idxes)
+    scores = tf.gather(scores, idxes)
+    bboxes = tf.gather_nd(bboxes, idxes)
+    return classes, scores, bboxes, result[0]

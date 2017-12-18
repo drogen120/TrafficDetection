@@ -30,7 +30,7 @@ def draw_results(img, rclasses, rscores, rbboxes):
 data_format = 'NHWC'
 net_shape = (440, 440)
 ckpt = tf.train.get_checkpoint_state(os.path.dirname('./logs/checkpoint'))
-select_threshold = 0.10
+select_threshold = 0.20
 nms_threshold = 0.45
 
 with tf.Graph().as_default() as graph:
@@ -82,10 +82,21 @@ with tf.Graph().as_default() as graph:
             classes, scores, bboxes = tf_methods.tf_bboxes_sort(classes,
                                                                 scores, bboxes,
                                                                 top_k=100)
+            # print ('shape pf classes:',classes.shape)
+            # print ('shape of scores:',scores.shape)
+            # print ('shape of bboxes:',bboxes.shape)
+            # print ('**************')
+            # classes = tf.squeeze(classes)
+            # scores = tf.squeeze(scores)
+            # bboxes = tf.squeeze(bboxes)
+            classes, scores, bboxes, end_index = tf_methods.tf_bboxes_nms(classes, scores, bboxes, nms_threshold=nms_threshold)
+            # print ('shape pf classes:',classes.shape)
+            # print ('shape of scores:',scores.shape)
+            # print ('shape of bboxes:',bboxes.shape)
+            # print ('**************')
             classes = tf.squeeze(classes)
             scores = tf.squeeze(scores)
             bboxes = tf.squeeze(bboxes)
-            # classes, scores, bboxes = tf_methods.tf_bboxes_nms(classes, scores, bboxes, nms_threshold=nms_threshold)
             # Resize bboxes to original image shape. Note: useless for Resize.WARP!
             bboxes = tf_methods.tf_bboxes_resize(bbox_img, bboxes)
 
@@ -99,7 +110,7 @@ with tf.Graph().as_default() as graph:
 
 
         # try feed forward graph
-        file_path = './test_img/201702071403_00017109.png'
+        file_path = './test_img/201702071403_00024341.png'
         image = Image.open(file_path)
         img = image.resize((440,440), Image.ANTIALIAS)
         input_image = np.expand_dims(np.array(img),0)
@@ -118,13 +129,14 @@ with tf.Graph().as_default() as graph:
         # print (rbboxes)
         # print ('shape of rbboxes:',rbboxes.shape)
         # run after nms nodes
-        rclasses_,rscores_, rbboxes_ = sess.run(
-            [classes_,scores_,bboxes_], feed_dict={
+        rclasses_,rscores_, rbboxes_, index_str = sess.run(
+            [classes_,scores_,bboxes_, end_index], feed_dict={
             input_tensor: input_image
         })
         print('rscores_:',rscores_)
         print('rbboxes:',rbboxes_)
         print('rclasses_:',rclasses_)
+        print('index_end:',index_str)
         draw_results(image, rclasses_, rscores_, rbboxes_)
         # raise
 
