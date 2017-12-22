@@ -5,7 +5,6 @@ import random
 import numpy as np
 import tensorflow as tf
 import cv2
-import glob
 
 slim = tf.contrib.slim
 
@@ -92,32 +91,28 @@ def process_image(img, select_threshold=0.35, nms_threshold=0.35, net_shape=(102
             rpredictions, rlocalisations, ssd_anchors,
             select_threshold=select_threshold, img_shape=net_shape, num_classes=11, decode=True)
 
-    print ("shape of rclasses:", rclasses.shape)
-    print ("shape of rscores:", rscores.shape)
-    print ("shape of rbboxes:", rbboxes.shape)
+    # print ("shape of rclasses:", rclasses.shape)
+    # print ("shape of rscores:", rscores.shape)
+    # print ("shape of rbboxes:", rbboxes.shape)
     rbboxes = np_methods.bboxes_clip(rbbox_img, rbboxes)
     rclasses, rscores, rbboxes = np_methods.bboxes_sort(rclasses, rscores, rbboxes, top_k=400)
-    print ('====================')
-    print ("shape of rclasses:", rclasses.shape)
-    print ("shape of rscores:", rscores.shape)
-    print ("shape of rbboxes:", rbboxes.shape)
+    # print ('====================')
+    # print ("shape of rclasses:", rclasses.shape)
+    # print ("shape of rscores:", rscores.shape)
+    # print ("shape of rbboxes:", rbboxes.shape)
     rclasses, rscores, rbboxes = np_methods.bboxes_nms(rclasses, rscores, rbboxes, nms_threshold=nms_threshold)
-    print ("~~~~~~~~~~~~~~~~~~~~")
-    print ("shape of rclasses:", rclasses.shape)
-    print ("shape of rscores:", rscores.shape)
-    print ("shape of rbboxes:", rbboxes.shape)
+    # print ("~~~~~~~~~~~~~~~~~~~~")
+    # print ("shape of rclasses:", rclasses.shape)
+    # print ("shape of rscores:", rscores.shape)
+    # print ("shape of rbboxes:", rbboxes.shape)
     # Resize bboxes to original image shape. Note: useless for Resize.WARP!
     rbboxes = np_methods.bboxes_resize(rbbox_img, rbboxes)
     summer_writer.add_summary(summary_op_str, 1)
     # print rclasses, rscores, rbboxes
     return rclasses, rscores, rbboxes
-
 color_list = [(0, 0, 255), (255, 0, 0), (255, 0, 0), (255, 255, 0),
               (255, 255,0), (255, 255, 0), (255, 255, 0), (0, 255, 0),
               (0, 255,0), (0, 255, 0), (0, 255, 255), (0, 255, 0)]
-
-class_list = ["None", "StopLine", "CrossWalk", "Green", "Yellow", "Red", 
-              "Unknown", "Car", "Truck", "Bus", "Person"]
 
 def draw_results(img, rclasses, rscores, rbboxes, index):
 
@@ -130,22 +125,49 @@ def draw_results(img, rclasses, rscores, rbboxes, index):
         ymax = int(rbboxes[i, 2] * height)
         xmax = int(rbboxes[i, 3] * width)
         cv2.rectangle(img, (xmin, ymin), (xmax, ymax), color_list[rclasses[i]], thickness=2)
-        cv2.putText(img, class_list[rclasses[i]], (xmin, ymin),
+        cv2.putText(img, str(rclasses[i]), (xmin, ymin),
             cv2.FONT_HERSHEY_SIMPLEX, 1, color_list[rclasses[i]])
+        if ((2 in rclasses) or (1 in rclasses) or (3 in rclasses) or
+                (5 in rclasses) or (6 in rclasses) or (4 in rclasses)):
+            cv2.putText(img, "Intersection", (180, 100), cv2.FONT_ITALIC, 2,
+                        (255, 255, 0))
+        else:
+            cv2.putText(img, "Road", (180, 100), cv2.FONT_ITALIC, 2,
+                        (255, 255, 0))
     #cv2.imshow("predict", img)
-    cv2.imwrite('./test_result/test_%d.jpg' % index, img)
+    # cv2.imwrite('./test_result/test_%d.jpg' % index, img)
+    return img
 
 # path = '/home/gpu_server2/DataSet/dayTrain/dayTest/daySequence1/frames/'
-path = './test_img/*.png'
+# path = './test_img/'
 # image_names = sorted(os.listdir(path))
-image_names = glob.glob(path)
 # print image_names
-index = 1
-print image_names
-for image_name in image_names:
-    img = cv2.imread(image_name)
-    print img
-    destRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    rclasses, rscores, rbboxes =  process_image(destRGB)
-    draw_results(img, rclasses, rscores, rbboxes, index)
-    index += 1
+# index = 1
+# for image_name in image_names:
+    # img = cv2.imread(path + image_name)
+    # destRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    # rclasses, rscores, rbboxes =  process_image(destRGB)
+    # draw_results(img, rclasses, rscores, rbboxes, index)
+    # index += 1
+
+capture = cv2.VideoCapture('./Audio201605231133.mp4')
+fourcc = cv2.VideoWriter_fourcc(*'XVID')
+ret, frame = capture.read()
+h, w, _ = frame.shape
+out = cv2.VideoWriter('output.avi',fourcc, 30.0, (w,h))
+count = 0
+for i in range(8000):
+    ret, frame = capture.read()
+    count = count + 1
+    if count > 2400: 
+        destRGB = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        rclasses, rscores, rbboxes =  process_image(destRGB)
+        img = draw_results(frame, rclasses, rscores, rbboxes, count)
+        out.write(img)
+        print count
+        # pic_name = str(i) +'.jpg'
+        # cv2.imwrite(img_folder + pic_name , frame)
+        # print (pic_name)
+
+capture.release()
+out.release()
